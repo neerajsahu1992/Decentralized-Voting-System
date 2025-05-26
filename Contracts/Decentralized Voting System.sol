@@ -1,138 +1,140 @@
-# Decentralized Voting System
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
 
-## Project Description
-
-The Decentralized Voting System is a blockchain-based transparent and secure voting platform built on Ethereum using Solidity smart contracts. This system eliminates the need for traditional centralized voting authorities by leveraging blockchain technology to ensure vote immutability, transparency, and verifiability.
-
-The platform allows administrators to create voting sessions, register eligible voters, and manage candidates, while providing voters with a secure and anonymous way to cast their votes. All voting data is stored on the blockchain, making it publicly auditable and tamper-proof.
-
-## Project Vision
-
-Our vision is to revolutionize democratic processes by creating a trustless, transparent, and accessible voting system that can be used for various scenarios including:
-
-- **Government Elections**: Municipal, state, and national level voting
-- **Corporate Governance**: Shareholder voting and board elections  
-- **Community Decisions**: HOA votes, student council elections
-- **DAO Governance**: Decentralized organization decision making
-- **Survey and Polling**: Transparent opinion collection
-
-We aim to increase voter confidence, reduce election costs, eliminate fraud, and make voting accessible to everyone regardless of their physical location.
-
-## Key Features
-
-### 🔐 **Secure Voter Registration**
-- Admin-controlled voter registration system
-- Address-based voter identification
-- Prevention of duplicate registrations
-- Voter eligibility verification
-
-### 🗳️ **Transparent Voting Process**
-- Real-time vote casting with immediate blockchain confirmation
-- One-person-one-vote enforcement through smart contract logic
-- Anonymous voting while maintaining verifiability
-- Public vote counting with tamper-proof results
-
-### ⏰ **Time-Bound Voting Sessions**
-- Configurable voting duration with start and end times
-- Automatic session management and enforcement
-- Multi-candidate support (minimum 2 candidates required)
-- Session title and description support
-
-### 📊 **Real-Time Results & Analytics**
-- Live vote counting and candidate standings
-- Automatic winner determination based on highest vote count
-- Total participation tracking
-- Individual candidate vote statistics
-
-### 🛡️ **Security & Access Control**
-- Role-based access control (Admin vs Voter permissions)
-- Protection against double voting
-- Input validation and error handling
-- Emergency admin transfer functionality
-
-### 🔍 **Transparency & Auditability**
-- All votes recorded permanently on blockchain
-- Public verification of voting process
-- Event logging for all major actions
-- Open-source smart contract code
-
-## Future Scope
-
-### 🚀 **Enhanced Voting Mechanisms**
-- **Ranked Choice Voting**: Implementation of preferential voting systems
-- **Quadratic Voting**: Allow voters to express intensity of preferences
-- **Delegated Voting**: Proxy voting and delegation features
-- **Multi-Round Elections**: Support for runoff elections
-
-### 🔒 **Advanced Privacy Features**
-- **Zero-Knowledge Proofs**: Complete voter privacy while maintaining verifiability
-- **Commit-Reveal Schemes**: Hide vote choices until voting period ends
-- **Ring Signatures**: Anonymous voting with cryptographic privacy
-- **Homomorphic Encryption**: Encrypted vote tallying
-
-### 🌐 **Scalability & Integration**
-- **Layer 2 Solutions**: Implementation on Polygon, Arbitrum for lower gas costs
-- **Cross-Chain Compatibility**: Multi-blockchain voting support
-- **Mobile Application**: User-friendly mobile interface
-- **Web3 Integration**: MetaMask and other wallet connections
-
-### 🎯 **Governance & DAO Features**
-- **Proposal System**: Allow community members to create voting proposals
-- **Staking Mechanisms**: Token-based voting power
-- **Multi-Sig Integration**: Committee-based decision making
-- **Governance Token**: Native token for platform governance
-
-### 📱 **User Experience Improvements**
-- **Intuitive Dashboard**: Real-time voting statistics and candidate profiles
-- **Notification System**: Automated reminders and updates
-- **Multi-Language Support**: Internationalization for global adoption
-- **Accessibility Features**: Support for users with disabilities
-
-### 🔧 **Technical Enhancements**
-- **Gas Optimization**: Reduce transaction costs through code optimization
-- **Oracle Integration**: External data feeds for automated processes
-- **IPFS Storage**: Decentralized storage for candidate information and documents
-- **API Development**: RESTful APIs for third-party integrations
-
-### 🏛️ **Regulatory Compliance**
-- **KYC/AML Integration**: Identity verification for official elections
-- **Audit Trail**: Comprehensive logging for regulatory requirements
-- **Legal Framework**: Compliance with electoral laws and regulations
-- **Certification Process**: Third-party security audits and certifications
-
-### 🌍 **Real-World Applications**
-- **Government Partnerships**: Collaboration with electoral commissions
-- **Educational Institutions**: Student government elections
-- **Corporate Sector**: Shareholder voting systems
-- **Non-Profit Organizations**: Board elections and community voting
-
----
-
-## Project Structure
-```
-Decentralized-Voting-System/
-├── contracts/
-│   └── Project.sol
-├── README.md
-└── docs/
-    ├── deployment-guide.md
-    ├── user-manual.md
-    └── technical-specifications.md
-```
-
-## Getting Started
-
-1. **Prerequisites**: Solidity ^0.8.19, Hardhat/Truffle, MetaMask wallet
-2. **Deployment**: Deploy the Project.sol contract to your preferred Ethereum network
-3. **Admin Setup**: The deployer becomes the admin automatically
-4. **Voter Registration**: Admin registers eligible voters using their addresses
-5. **Create Session**: Admin starts a voting session with candidates and duration
-6. **Vote**: Registered voters cast their votes during the active period
-7. **Results**: Anyone can view results after the voting period ends
-
----
-
-*Built with ❤️ for a more democratic and transparent future*
-
-contract address : 0x76A9ff46Fc5AEDF5c026647Ae795607E55B0fFa0 
-Screenshot : 
+contract Project {
+    // Struct to represent a proposal
+    struct Proposal {
+        uint256 id;
+        string description;
+        uint256 voteCount;
+        uint256 deadline;
+        bool executed;
+        address proposer;
+    }
+    
+    // Mapping to store proposals
+    mapping(uint256 => Proposal) public proposals;
+    
+    // Mapping to track if an address has voted on a specific proposal
+    mapping(uint256 => mapping(address => bool)) public hasVoted;
+    
+    // Mapping to store registered voters
+    mapping(address => bool) public registeredVoters;
+    
+    // State variables
+    uint256 public proposalCount;
+    address public admin;
+    uint256 public constant VOTING_DURATION = 7 days;
+    
+    // Events
+    event ProposalCreated(uint256 indexed proposalId, string description, address indexed proposer);
+    event VoteCast(uint256 indexed proposalId, address indexed voter);
+    event VoterRegistered(address indexed voter);
+    
+    // Modifiers
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin can perform this action");
+        _;
+    }
+    
+    modifier onlyRegisteredVoter() {
+        require(registeredVoters[msg.sender], "You must be a registered voter");
+        _;
+    }
+    
+    modifier proposalExists(uint256 _proposalId) {
+        require(_proposalId > 0 && _proposalId <= proposalCount, "Proposal does not exist");
+        _;
+    }
+    
+    constructor() {
+        admin = msg.sender;
+        registeredVoters[admin] = true; // Admin is automatically registered
+    }
+    
+    /**
+     * @dev Core Function 1: Create a new proposal
+     * @param _description Description of the proposal
+     */
+    function createProposal(string memory _description) external onlyRegisteredVoter {
+        require(bytes(_description).length > 0, "Proposal description cannot be empty");
+        
+        proposalCount++;
+        
+        proposals[proposalCount] = Proposal({
+            id: proposalCount,
+            description: _description,
+            voteCount: 0,
+            deadline: block.timestamp + VOTING_DURATION,
+            executed: false,
+            proposer: msg.sender
+        });
+        
+        emit ProposalCreated(proposalCount, _description, msg.sender);
+    }
+    
+    /**
+     * @dev Core Function 2: Cast a vote on a proposal
+     * @param _proposalId ID of the proposal to vote on
+     */
+    function vote(uint256 _proposalId) external onlyRegisteredVoter proposalExists(_proposalId) {
+        Proposal storage proposal = proposals[_proposalId];
+        
+        require(block.timestamp <= proposal.deadline, "Voting period has ended");
+        require(!hasVoted[_proposalId][msg.sender], "You have already voted on this proposal");
+        require(!proposal.executed, "Proposal has already been executed");
+        
+        hasVoted[_proposalId][msg.sender] = true;
+        proposal.voteCount++;
+        
+        emit VoteCast(_proposalId, msg.sender);
+    }
+    
+    /**
+     * @dev Core Function 3: Register a new voter (Admin only)
+     * @param _voter Address of the voter to register
+     */
+    function registerVoter(address _voter) external onlyAdmin {
+        require(_voter != address(0), "Invalid voter address");
+        require(!registeredVoters[_voter], "Voter is already registered");
+        
+        registeredVoters[_voter] = true;
+        
+        emit VoterRegistered(_voter);
+    }
+    
+    /**
+     * @dev Get proposal details
+     * @param _proposalId ID of the proposal
+     * @return Proposal details
+     */
+    function getProposal(uint256 _proposalId) external view proposalExists(_proposalId) 
+        returns (uint256, string memory, uint256, uint256, bool, address) {
+        Proposal memory proposal = proposals[_proposalId];
+        return (
+            proposal.id,
+            proposal.description,
+            proposal.voteCount,
+            proposal.deadline,
+            proposal.executed,
+            proposal.proposer
+        );
+    }
+    
+    /**
+     * @dev Check if voting is still active for a proposal
+     * @param _proposalId ID of the proposal
+     * @return bool indicating if voting is active
+     */
+    function isVotingActive(uint256 _proposalId) external view proposalExists(_proposalId) returns (bool) {
+        return block.timestamp <= proposals[_proposalId].deadline && !proposals[_proposalId].executed;
+    }
+    
+    /**
+     * @dev Get total number of proposals
+     * @return Total proposal count
+     */
+    function getTotalProposals() external view returns (uint256) {
+        return proposalCount;
+    }
+}
